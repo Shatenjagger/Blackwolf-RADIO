@@ -21,5 +21,17 @@ Un bot de Discord para reproducir música retro en canales de voz.
 ## 📦 Instalación
 1. Clona este repositorio:
    ```bash
-   git clone https://github.com/Shatenjagger/BlackWolf-RADIO.git
-   cd BlackWolf-RADIO
+ git clone https://github.com/Shatenjagger/BlackWolf-RADIO.git
+ cd BlackWolf-RADIO
+ 2. Instala las dependencias:
+   pip install -r requirements.txt
+3. Crean un archivo .env con las siguientes variables:   
+   DISCORD_TOKEN=TU_TOKEN_DE_DISCORD
+   CHANNEL_ID=ID_DEL_CANAL_DE_VOZ
+  
+   🚀 Ejecución
+   python retroradio.py
+
+   📄 Licencia
+Este proyecto está bajo la licencia MIT.
+
