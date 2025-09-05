@@ -1,0 +1,7 @@
+name: retro-radio-bot
+env: python
+build:
+  commands:
+    - apt-get update && apt-get install -y ffmpeg
+run:
+  command: python retroradio.py
