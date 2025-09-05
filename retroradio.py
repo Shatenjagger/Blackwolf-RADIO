@@ -5,6 +5,8 @@ import os
 import random  # Para reproducción aleatoria
 from dotenv import load_dotenv
 import logging
+from threading import Thread
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Activar el modo DEBUG para obtener logs detallados
 logging.basicConfig(level=logging.DEBUG)
@@ -113,65 +115,20 @@ async def play(ctx):
     is_playing = False
     await ctx.send("🎵 La cola de reproducción ha terminado.")
 
-# Comando para detener
-@bot.command()
-async def stop(ctx):
-    global is_playing
-    voice = ctx.guild.voice_client
-    if voice:
-        is_playing = False  # Detiene el bucle de reproducción
-        if voice.is_playing() or voice.is_paused():
-            voice.stop()
-        await ctx.send("⏹️ Detenido.")
-    else:
-        await ctx.send("❌ No estoy conectado a un canal de voz.")
+# Servidor HTTP básico para el health check
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
 
-# Comando para pausar
-@bot.command()
-async def pause(ctx):
-    voice = ctx.guild.voice_client
-    if voice and voice.is_playing():
-        voice.pause()
-        await ctx.send("⏸️ Pausado.")
-    else:
-        await ctx.send("❌ No hay música reproduciéndose.")
+def run_health_check_server():
+    server_address = ('0.0.0.0', 8080)  # Puerto 8080
+    httpd = HTTPServer(server_address, HealthCheckHandler)
+    httpd.serve_forever()
 
-# Comando para reanudar
-@bot.command()
-async def resume(ctx):
-    voice = ctx.guild.voice_client
-    if voice and voice.is_paused():
-        voice.resume()
-        await ctx.send("▶️ Reanudado.")
-    else:
-        await ctx.send("❌ No hay música pausada.")
-
-# Comando para saltar a la siguiente pista
-@bot.command()
-async def skip(ctx):
-    voice = ctx.guild.voice_client
-    if voice and voice.is_playing():
-        voice.stop()
-        await ctx.send("⏭️ Saltando a la siguiente pista.")
-    else:
-        await ctx.send("❌ No hay música reproduciéndose.")
-
-# Comando para mostrar la cola
-@bot.command()
-async def queue(ctx):
-    if music_queue:
-        queue_list = "\n".join([os.path.basename(song) for song in music_queue])
-        await ctx.send(f"🎵 Cola de reproducción:\n{queue_list}")
-    else:
-        await ctx.send("❌ La cola de reproducción está vacía.")
-
-# Evento cuando el bot está listo
-@bot.event
-async def on_ready():
-    print(f"✅ Bot conectado como {bot.user}")
-    channel = bot.get_channel(CHANNEL_ID)
-    if channel and isinstance(channel, discord.VoiceChannel):
-        await channel.connect()
+# Inicia el servidor HTTP en un hilo separado
+Thread(target=run_health_check_server, daemon=True).start()
 
 # Ejecutar el bot
 bot.run(TOKEN)  # Token cargado desde .env
