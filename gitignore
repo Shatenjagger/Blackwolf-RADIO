@@ -1,0 +1,14 @@
+# Ignorar archivos sensibles
+.env
+
+# Ignorar archivos generados por Python
+__pycache__/
+*.pyc
+*.log
+
+# Ignorar archivos grandes
+descargas_mp3/
+
+# Ignorar archivos de IDEs/editores
+.vscode/
+.idea/
