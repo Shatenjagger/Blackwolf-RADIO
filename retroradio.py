@@ -3,7 +3,6 @@ from discord.ext import commands
 import asyncio
 import os
 import random  # Para selección aleatoria
-import requests  # Para interactuar con la API de Archive.org
 from dotenv import load_dotenv
 import logging
 from threading import Thread
@@ -23,11 +22,10 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# IDs de las colecciones en Archive.org
-ARCHIVE_COLLECTIONS = [
-    "videogamemusic_201706",
-    "VGM_Soundtracks",
-    "video-game-music-remixes-archive-2018"
+# Rutas a los archivos .m3u en la raíz del repositorio
+M3U_FILES = [
+    "video-game-music-remixes-archive-2018_vbr.m3u",
+    "videogamemusic_201706_vbr.m3u"
 ]
 
 # Lista global de URLs de canciones
@@ -36,35 +34,22 @@ global_music_queue = []
 # Variable global para controlar la reproducción
 is_playing = False
 
-# Función para cargar canciones desde Archive.org
-def load_archive_collections():
+# Función para cargar múltiples archivos .m3u
+def load_m3u_playlists():
     global global_music_queue
     global_music_queue = []  # Limpiar la cola global antes de cargar nuevas canciones
-    for collection_id in ARCHIVE_COLLECTIONS:
+    for m3u_file in M3U_FILES:
         try:
-            # URL de la API de Archive.org para listar archivos en una colección
-            api_url = f"https://archive.org/advancedsearch.php?q=collection:{collection_id}&fl%5B%5D=identifier&rows=1000&output=json"
-            response = requests.get(api_url)
-            response.raise_for_status()
-            data = response.json()
-
-            # Extraer los identificadores de los archivos
-            identifiers = [item["identifier"] for item in data["response"]["docs"]]
-            print(f"✅ Encontrados {len(identifiers)} archivos en la colección '{collection_id}'.")
-
-            # Obtener las URLs de los archivos .mp3
-            for identifier in identifiers:
-                file_url = f"https://archive.org/download/{identifier}"
-                files_response = requests.get(f"{file_url}/?output=json")
-                files_data = files_response.json()
-
-                # Filtrar solo los archivos .mp3
-                mp3_files = [f"{file_url}/{filename}" for filename in files_data["files"] if filename.endswith(".mp3")]
-                global_music_queue.extend(mp3_files)
-
-            print(f"✅ Se cargaron {len(global_music_queue)} canciones hasta ahora.")
+            if not os.path.exists(m3u_file):
+                print(f"❌ Archivo .m3u no encontrado: {m3u_file}")
+                continue
+            with open(m3u_file, "r", encoding="utf-8") as file:
+                lines = file.readlines()
+                music_urls = [line.strip() for line in lines if not line.startswith("#") and line.strip()]
+                global_music_queue.extend(music_urls)
+            print(f"✅ Se cargaron {len(music_urls)} canciones desde {m3u_file}.")
         except Exception as e:
-            print(f"❌ Error al cargar la colección '{collection_id}': {e}")
+            print(f"❌ Error al cargar el archivo .m3u {m3u_file}: {e}")
     print(f"✅ Total de canciones cargadas: {len(global_music_queue)}.")
 
 # Comando para unirse al canal de voz
@@ -158,7 +143,7 @@ def run_health_check_server():
 @bot.event
 async def on_ready():
     print(f"✅ Bot conectado como {bot.user}")
-    load_archive_collections()  # Cargar las colecciones automáticamente al iniciar
+    load_m3u_playlists()  # Cargar las listas .m3u automáticamente al iniciar
     await bot.change_presence(activity=discord.Game(name="🎵 Reproductor de VGM"))
 
 # Inicia el servidor HTTP en un hilo separado
@@ -166,5 +151,6 @@ Thread(target=run_health_check_server, daemon=True).start()
 
 # Ejecutar el bot
 bot.run(TOKEN)  # Token cargado desde .env
+
 
 
