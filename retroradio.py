@@ -2,11 +2,11 @@ import discord
 from discord.ext import commands
 import asyncio
 import os
-import random  # Para selección aleatoria
+import random
 from dotenv import load_dotenv
 import logging
 from threading import Thread
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from flask import Flask
 
 # Activar el modo DEBUG para obtener logs detallados
 logging.basicConfig(level=logging.DEBUG)
@@ -77,7 +77,7 @@ async def leave(ctx):
 # Comando para reproducir música automáticamente
 @bot.command()
 async def play(ctx):
-    global is_playing, current_song
+    global is_playing
     voice = ctx.guild.voice_client
 
     if not voice:
@@ -97,16 +97,12 @@ async def play(ctx):
 
     while is_playing:
         try:
-            # Seleccionar una canción aleatoria de la cola global
             current_song = random.choice(global_music_queue)
-
-            # Reproducir la canción directamente desde la URL
             source = discord.FFmpegPCMAudio(current_song)
             voice.play(source, after=lambda e: print(f"Fin de la canción: {current_song}"))
             song_name = current_song.split("/")[-1]  # Extraer el nombre del archivo de la URL
             await ctx.send(f"▶️ Reproduciendo: `{song_name}`")
 
-            # Esperar mientras la canción se reproduce
             while voice.is_playing():
                 await asyncio.sleep(1)
 
@@ -127,7 +123,7 @@ async def skip(ctx):
     else:
         await ctx.send("❌ No hay ninguna canción reproduciéndose.")
 
-# ✅ NUEVO: Comando para detener la reproducción
+# Comando para detener la reproducción
 @bot.command()
 async def stop(ctx):
     global is_playing
@@ -139,17 +135,12 @@ async def stop(ctx):
     else:
         await ctx.send("❌ No hay ninguna canción reproduciéndose.")
 
-# Servidor HTTP básico para el health check
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"OK")
+# Servidor Flask para el health check
+app = Flask(__name__)
 
-def run_health_check_server():
-    server_address = ('0.0.0.0', 8080)  # Puerto 8080
-    httpd = HTTPServer(server_address, HealthCheckHandler)
-    httpd.serve_forever()
+@app.route('/health', methods=['GET'])
+def health():
+    return "OK", 200
 
 # Evento de inicio del bot
 @bot.event
@@ -158,11 +149,15 @@ async def on_ready():
     load_m3u_playlists()  # Cargar las listas .m3u automáticamente al iniciar
     await bot.change_presence(activity=discord.Game(name="🎵 Reproductor de VGM"))
 
-# Inicia el servidor HTTP en un hilo separado
-Thread(target=run_health_check_server, daemon=True).start()
+# Inicia el servidor Flask en un hilo separado
+def run_flask():
+    app.run(host='0.0.0.0', port=8080)
+
+Thread(target=run_flask, daemon=True).start()
 
 # Ejecutar el bot
 bot.run(TOKEN)  # Token cargado desde .env
+
 
 
 
