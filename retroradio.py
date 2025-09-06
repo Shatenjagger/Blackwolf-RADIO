@@ -127,6 +127,18 @@ async def skip(ctx):
     else:
         await ctx.send("❌ No hay ninguna canción reproduciéndose.")
 
+# ✅ NUEVO: Comando para detener la reproducción
+@bot.command()
+async def stop(ctx):
+    global is_playing
+    voice = ctx.guild.voice_client
+    if voice and voice.is_playing():
+        voice.stop()
+        is_playing = False
+        await ctx.send("🛑 Reproducción detenida.")
+    else:
+        await ctx.send("❌ No hay ninguna canción reproduciéndose.")
+
 # Servidor HTTP básico para el health check
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -151,6 +163,7 @@ Thread(target=run_health_check_server, daemon=True).start()
 
 # Ejecutar el bot
 bot.run(TOKEN)  # Token cargado desde .env
+
 
 
 
